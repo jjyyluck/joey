@@ -276,6 +276,11 @@ Rafe:      Whatever happens tonight — text me. Anytime. About anything.
 | 完成第 2 章 **且** 好感 ≥ 35 | **AI 自由聊天解锁**：Rafe 的私人号码出现在聊天列表，置顶 |
 | 完成第 2 章，好感 < 35 | 号码"信号弱"：每日 1 段免费支线（如「The Cat Has a Name Now」+5 好感）；或 💎 关键选项补足；进度条 + Rafe 台词提示："I still don't know if I can drag you into this." |
 
+### 解锁时刻的付费设计
+
+- **破冰礼包（$0.99，限时 48 小时）**：Rafe 的第一条语音"It's done. I'm okay."（完整版）+ CG「The Burner Phone」+ 30 条消息额度。
+- **礼物**（钻石）：玫瑰、黑胶唱片（爵士）、猫粮（给巷子里那只猫）。每件礼物都会写入记忆，Rafe 会在之后的聊天中提起，例如送过猫粮后："The cat has a name now. I'm not telling you what it is. …Fine. It's yours."
+
 ### 解锁后第一条消息（半脚本）
 
 脚本给出骨架，AI 依据剧情状态填充括号内内容，长度 2–4 个气泡：
