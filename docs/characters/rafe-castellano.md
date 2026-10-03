@@ -166,6 +166,12 @@ Rafe: Breakfast tomorrow? I'll explain. Some of it.
 [System] Chapter 2 unlocked · 继续剧情，解锁与 Rafe 的自由聊天
 ```
 
+- **次日主动消息（D1 召回）**：安装后约 20–24 小时，Rafe 发送一条个性化推送，由 AI 基于第 1 章选择 + 试聊内容生成，例如：
+  - (ch1_clever_glass) "You never told me what you'd have done if that champagne was poisoned."
+  - (ch1_dress_gift) "Someone at the party asked where you got the red dress. I said it was a secret."
+  - (试聊提到工作) "How was the meeting you were dreading? Tell me you won."
+  推送文案需过审核且不得包含操纵性话术（如 "I'll be sad if you don't come back"）。
+
 - 试聊阶段 AI 约束：不得透露任何"秘密"；话题限定在今晚的派对、陌生人、"midnight question"；必须在第 3 条回复里自然收尾。
 
 ---
