@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  EDITOR
+  ADMIN
+}
+
+enum StoryStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+enum SubmissionStatus {
+  REVIEWING
+  CHANGES_REQUESTED
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+
+  sessions      Session[]
+  questions     Question[]
+  waits         Wait[]
+  stories       Story[]
+  comments      Comment[]
+  ratings       Rating[]
+  bookmarks     Bookmark[]
+  submissions   Submission[]
+  notifications Notification[]
+  reads         ReadEvent[]
+  reviews       Submission[]   @relation("Reviewer")
+  picks         EditorPick[]
+  reports       Report[]
+}
+
+model Session {
+  id        String   @id // sha256 of the cookie token
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Question {
+  id        String   @id @default(cuid())
+  title     String
+  category  String
+  askerId   String?
+  source    String   @default("user") // user | editor
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  asker       User?        @relation(fields: [askerId], references: [id], onDelete: SetNull)
+  waits       Wait[]
+  stories     Story[]
+  submissions Submission[]
+
+  @@index([category])
+  @@index([createdAt])
+}
+
+model Wait {
+  userId     String
+  questionId String
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, questionId])
+  @@index([questionId])
+}
+
+model Story {
+  id           String      @id @default(cuid())
+  questionId   String
+  authorId     String?
+  authorName   String
+  title        String
+  paragraphs   String[]
+  paywallAfter Int // number of free paragraphs
+  charCount    Int
+  preview      String      @default("") // first ~200 chars, used for duplicate checks
+  status       StoryStatus @default(PUBLISHED)
+  licensed     Boolean     @default(false) // from the licensed library
+  aiUsage      String      @default("none")
+  publishedAt  DateTime    @default(now())
+
+  question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  author     User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  comments   Comment[]
+  ratings    Rating[]
+  bookmarks  Bookmark[]
+  reads      ReadEvent[]
+  picks      EditorPick[]
+  submission Submission?
+
+  @@index([questionId])
+  @@index([publishedAt])
+}
+
+model ReadEvent {
+  id        String   @id @default(cuid())
+  storyId   String
+  userId    String?
+  visitorId String // anonymous cookie id, or user id
+  day       DateTime @db.Date
+  maxPara   Int      @default(0)
+  finished  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([storyId, visitorId, day])
+  @@index([day])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  storyId   String
+  paragraph Int
+  userId    String
+  body      String
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reports   Report[]
+
+  @@index([storyId, paragraph])
+}
+
+model Report {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  reason    String
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+}
+
+model Rating {
+  userId    String
+  storyId   String
+  score     Int // 1-10
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storyId])
+  @@index([storyId])
+}
+
+model Bookmark {
+  userId    String
+  storyId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storyId])
+}
+
+model EditorPick {
+  id        String   @id @default(cuid())
+  storyId   String
+  editorId  String
+  blurb     String
+  week      DateTime @db.Date // Monday of the pick week
+  createdAt DateTime @default(now())
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  editor    User     @relation(fields: [editorId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, week])
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  authorId     String
+  title        String
+  paragraphs   String[]
+  paywallAfter Int
+  questionId   String?
+  newQuestion  String?
+  category     String
+  line         String           @default("")
+  aiAnalysis   Json?
+  dupScore     Float            @default(0)
+  dupStoryId   String?
+  aiUsage      String
+  status       SubmissionStatus @default(REVIEWING)
+  reviewNote   String?
+  reviewerId   String?
+  storyId      String?          @unique
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reviewer User?     @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  question Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  story    Story?    @relation(fields: [storyId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  body      String
+  href      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
+
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+}

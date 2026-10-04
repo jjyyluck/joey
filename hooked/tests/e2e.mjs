@@ -1,0 +1,140 @@
+// End-to-end walk through the core loop against a running server (BASE, default http://localhost:3100).
+import { chromium } from "playwright";
+const BASE = process.env.BASE ?? "http://localhost:3100";
+const errs = [];
+const log = (...a) => console.log(...a);
+const assert = (c, m) => { if (!c) { throw new Error("ASSERT: " + m); } log("  ✓", m); };
+const b = await chromium.launch({ executablePath: process.env.CHROME ?? undefined });
+const ctx = await b.newContext({ viewport: { width: 400, height: 860 } });
+const p = await ctx.newPage();
+p.on("pageerror", (e) => errs.push(e.message));
+p.on("console", (m) => m.type() === "error" && !m.text().startsWith("Failed to load resource") && errs.push(m.text()));
+p.on("response", (r) => r.status() >= 400 && r.url().startsWith(BASE) && errs.push(`${r.status()} ${r.url()}`));
+const email = `reader${Date.now()}@hooked.test`;
+const note = `开头就很抓人 ${Date.now() % 100000}`;
+
+log("discover");
+await p.goto(BASE + "/");
+assert((await p.locator(".qcard").count()) > 5, "feed has cards");
+await p.click('nav.tabs >> text=家庭偏心');
+await p.waitForURL(/c=/);
+assert(true, "category filter works");
+
+log("reader (signed out)");
+await p.goto(BASE + "/s/L001");
+const freeN = await p.locator(".reader p").count();
+assert((await p.locator(".paywall").count()) === 1, `paywall shown after ${freeN} free paragraphs`);
+const html = await p.content();
+assert(!html.includes("data-pi=\"" + (freeN + 5) + "\""), "paid paragraphs not sent to signed-out reader");
+
+log("signup");
+await p.click(".paywall >> text=注册");
+await p.fill("#email", email); await p.fill("#name", "测试读者"); await p.fill("#password", "password123");
+await p.click("button:has-text('注册')");
+assert((await p.locator(".err").textContent()).includes("13"), "age confirmation required");
+await p.fill("#password", "password123");
+await p.check("#age"); await p.check("#terms");
+await p.click("button:has-text('注册')");
+await p.waitForURL(/\/s\/L001/);
+const fullN = await p.locator(".reader p").count();
+assert(fullN > freeN, `signed-in reader sees all ${fullN} paragraphs`);
+
+log("comment, rate, bookmark");
+await p.locator(".pcb").first().click();
+await p.fill("#cm-text", note);
+await p.click(".sheet button:has-text('发送')");
+await p.locator(".sheet .cm", { hasText: note }).waitFor();
+assert(true, "comment posted");
+await p.click(".sheet button:has-text('关闭')");
+await p.fill('textarea', '').catch(() => {});
+await p.locator(".stars button", { hasText: /^9$/ }).click();
+await p.waitForSelector("text=已打分");
+assert(true, "rated 9");
+await p.click("button:has-text('加入书架')");
+await p.waitForSelector("text=✓ 已在书架");
+assert(true, "bookmarked");
+
+log("ask a question");
+await p.goto(BASE + "/ask");
+await p.fill("#title", "父母把房子留给了兄弟姐妹，却要你来养老，你怎么做的？");
+await p.selectOption("#category", "家庭偏心");
+await p.click("button:has-text('发布问题')");
+await p.waitForSelector("text=已经有人问过类似的问题");
+assert(true, "similar question detected");
+await p.fill("#title", "婆婆总拿你和前儿媳比较，后来你是怎么反击的？");
+await p.click("button:has-text('仍然发布我的问题')");
+await p.waitForURL(/\/q\//);
+const qUrl = p.url().split("?")[0];
+assert(await p.locator("text=问题已发布").isVisible(), "question published and auto-waited");
+assert((await p.locator("button[aria-pressed=true]").textContent()).includes("坐等中"), "asker is waiting");
+
+log("upload a story for that question");
+await p.click("text=我来写");
+await p.waitForURL(/create\/upload/);
+const body = ["结婚第三年，婆婆第一次当着全家人的面，把我和前儿媳放在一起比较。"].concat(Array.from({ length: 30 }, (_, i) => `这是第${i + 2}段。她总说前儿媳会做饭、会说话、会来事，而我只会加班，我一直忍着，直到那天她把前儿媳请到了家里吃饭。`)).join("\n");
+await p.fill("#up-text", body);
+await p.click("button:has-text('下一步：AI 分析')");
+await p.waitForSelector("text=第 2 步");
+assert((await p.locator("#up-q").inputValue()) !== "", "question pre-selected");
+await p.click("button:has-text('往后一段')");
+assert(await p.locator("[data-action=x], button:has-text('提交编辑审核')").isDisabled(), "submit disabled until declarations");
+await p.selectOption("#up-ai", "none"); await p.check("#up-rights"); await p.check("#up-label");
+await p.fill("#up-title", "婆婆请前儿媳来吃饭的那天");
+await p.click("button:has-text('提交编辑审核')");
+await p.waitForURL(/me\/submissions/);
+assert((await p.locator(".badge").first().textContent()).includes("审核中"), "submission is under review");
+
+log("editor approves");
+const ed = await (await b.newContext()).newPage();
+await ed.goto(BASE + "/login?next=/editor");
+await ed.fill("#email", "admin@hooked.test"); await ed.fill("#password", "admin-password-123");
+await ed.click("button:has-text('登录')");
+await ed.waitForURL(/\/editor/);
+await ed.click(".card >> text=婆婆请前儿媳来吃饭的那天");
+await ed.click("button:has-text('通过并上线')");
+await ed.waitForURL(/done=/);
+assert(await ed.locator("text=已上线").isVisible(), "approved and published");
+
+log("notifications and question page");
+await p.goto(BASE + "/me/notifications");
+assert((await p.locator(".card").first().textContent()).includes("已通过审核"), "author notified");
+await p.goto(qUrl);
+assert((await p.locator("text=1 个故事回答了这个问题").count()) === 1, "story appears under the question");
+
+log("editor pick + rankings");
+await ed.goto(BASE + "/editor/picks");
+await ed.fill("#storyId", BASE + "/s/L001"); await ed.fill("#blurb", "开头三段就把冲突立住了");
+await ed.click("button:has-text('加入本周推荐')");
+await ed.waitForSelector(".card >> text=开头三段就把冲突立住了");
+await p.goto(BASE + "/rank?tab=editor");
+assert(await p.locator("text=开头三段就把冲突立住了").isVisible(), "editor pick on board");
+await p.goto(BASE + "/rank?tab=day");
+assert((await p.locator(".rrow").count()) >= 1, "day board lists the story read today");
+await p.goto(BASE + "/rank?tab=praise");
+assert(await p.locator("text=还没有故事达到上榜门槛").isVisible(), "praise board respects vote threshold");
+
+log("report flow");
+const r2 = await (await b.newContext()).newPage();
+await r2.goto(BASE + "/signup?next=/s/L001");
+await r2.fill("#email", "r2" + email); await r2.fill("#name", "第二位读者"); await r2.fill("#password", "password123");
+await r2.check("#age"); await r2.check("#terms"); await r2.click("button:has-text('注册')");
+await r2.waitForURL(/\/s\/L001/);
+await r2.locator(".pcb").first().click();
+await r2.locator(".sheet .cm", { hasText: note }).locator("text=举报并隐藏").click();
+await r2.waitForTimeout(500);
+await ed.goto(BASE + "/editor/reports");
+await ed.locator(".card", { hasText: note }).locator("button:has-text('隐藏这条段评')").click();
+await ed.waitForTimeout(500);
+await p.goto(BASE + "/s/L001");
+await p.locator(".pcb").first().click();
+await p.waitForSelector(".sheet .small >> nth=0");
+await p.waitForTimeout(800);
+assert((await p.locator(".sheet .cm", { hasText: note }).count()) === 0, "reported comment hidden by editor");
+
+log("non-editor blocked from editor");
+await p.goto(BASE + "/editor");
+assert(!p.url().includes("/editor"), "reader redirected away from /editor");
+
+assert(errs.length === 0, "no page errors " + JSON.stringify(errs));
+await b.close();
+log("ALL PASSED");
