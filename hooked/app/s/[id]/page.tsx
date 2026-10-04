@@ -5,6 +5,10 @@ import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { Reader } from "@/components/Reader";
 import { AuthorBar } from "@/components/AuthorBar";
+import { ActionBar } from "@/components/ActionBar";
+import { Comments } from "@/components/Comments";
+import { Related } from "@/components/Related";
+import { related } from "@/lib/recommend";
 import { fmtN, readMinutes } from "@/lib/format";
 
 async function load(id: string) {
@@ -32,26 +36,25 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   // Paid paragraphs never leave the server for signed-out readers.
   const unlocked = !!user;
   const visible = unlocked ? s.paragraphs : s.paragraphs.slice(0, s.paywallAfter);
-  const [counts, reads, rating, mine, bookmarked, others, follows] = await Promise.all([
-    db.comment.groupBy({ by: ["paragraph"], where: { storyId: id, hidden: false }, _count: { _all: true } }),
+  const [counts, reads, rating, mine, bookmarked, recs, follows, likes, liked, commentTotal] = await Promise.all([
+    db.comment.groupBy({ by: ["paragraph"], where: { storyId: id, hidden: false, paragraph: { not: null } }, _count: { _all: true } }),
     db.readEvent.count({ where: { storyId: id } }),
     db.rating.aggregate({ where: { storyId: id }, _avg: { score: true }, _count: { _all: true } }),
     user ? db.rating.findUnique({ where: { userId_storyId: { userId: user.id, storyId: id } } }) : null,
     user ? db.bookmark.findUnique({ where: { userId_storyId: { userId: user.id, storyId: id } } }) : null,
-    db.story.findMany({
-      where: { questionId: s.questionId, status: "PUBLISHED", NOT: { id } },
-      select: { id: true, title: true, authorName: true },
-      take: 5,
-    }),
+    related({ id: s.id, questionId: s.questionId, authorId: s.authorId, category: s.question.category }, user?.id ?? null),
     user && s.authorId
       ? db.follow.findUnique({ where: { followerId_followeeId: { followerId: user.id, followeeId: s.authorId } } })
       : null,
+    db.storyLike.count({ where: { storyId: id } }),
+    user ? db.storyLike.findUnique({ where: { userId_storyId: { userId: user.id, storyId: id } } }) : null,
+    db.comment.count({ where: { storyId: id, paragraph: null, hidden: false } }),
   ]);
   const bar = (size?: number) => (
     <AuthorBar author={s.author} fallbackName={s.authorName} following={!!follows} signedIn={!!user} isMe={user?.id === s.authorId} size={size} />
   );
   const commentCounts: Record<number, number> = {};
-  counts.forEach((c) => (commentCounts[c.paragraph] = c._count._all));
+  counts.forEach((c) => c.paragraph !== null && (commentCounts[c.paragraph] = c._count._all));
   return (
     <>
       <div className="pad" style={{ paddingBottom: 4 }}>
@@ -84,7 +87,6 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
         signedIn={!!user}
         commentCounts={commentCounts}
         myRating={mine?.score ?? null}
-        bookmarked={!!bookmarked}
       />
       {s.author && user?.id !== s.authorId && (
         <div className="pad" style={{ paddingTop: 0 }}>
@@ -94,17 +96,9 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
       )}
-      {others.length > 0 && (
-        <div className="pad">
-          <h3>这个问题的其他回答</h3>
-          {others.map((o) => (
-            <Link key={o.id} href={`/s/${o.id}`} className="card soft">
-              <b>{o.title}</b>
-              <span className="small">{o.authorName}</span>
-            </Link>
-          ))}
-        </div>
-      )}
+      <Related items={recs} />
+      <Comments storyId={s.id} signedIn={!!user} initialTotal={commentTotal} />
+      <ActionBar storyId={s.id} likes={likes} liked={!!liked} comments={commentTotal} bookmarked={!!bookmarked} signedIn={!!user} title={s.question.title} />
     </>
   );
 }

@@ -17,7 +17,7 @@ const PRAISE_PRIOR = Number(process.env.RANK_PRAISE_PRIOR ?? 30);
 
 export const RANK_RULES: Record<RankTab, string> = {
   day: "按今天（美东时间）的阅读人数排序，同一个人一天只算一次。",
-  week: "按近 7 天热度排序：阅读 ×1、读完 ×3、段评 ×2、收藏 ×2。",
+  week: "按近 7 天热度排序：阅读 ×1、读完 ×3、评论 ×2、收藏 ×2、赞同 ×2。",
   editor: "由编辑每周挑选，不看数据，只看故事好不好。",
   praise: `按读者评分和读完率排序。至少 ${PRAISE_MIN_VOTES} 人评分、读完率 ${Math.round(
     PRAISE_MIN_COMPLETION * 100,
@@ -55,15 +55,16 @@ export async function dayBoard(limit = 20): Promise<RankRow[]> {
 export async function weekBoard(limit = 20): Promise<RankRow[]> {
   const since = addDays(easternDay(), -6);
   const sinceTs = addDays(new Date(), -7);
-  const [reads, finishes, comments, bookmarks] = await Promise.all([
+  const [reads, finishes, comments, bookmarks, likes] = await Promise.all([
     db.readEvent.groupBy({ by: ["storyId"], where: { day: { gte: since } }, _count: { _all: true } }),
     db.readEvent.groupBy({ by: ["storyId"], where: { day: { gte: since }, finished: true }, _count: { _all: true } }),
     db.comment.groupBy({ by: ["storyId"], where: { createdAt: { gte: sinceTs }, hidden: false }, _count: { _all: true } }),
     db.bookmark.groupBy({ by: ["storyId"], where: { createdAt: { gte: sinceTs } }, _count: { _all: true } }),
+    db.storyLike.groupBy({ by: ["storyId"], where: { createdAt: { gte: sinceTs } }, _count: { _all: true } }),
   ]);
-  const acc = new Map<string, { reads: number; finishes: number; comments: number; bookmarks: number }>();
-  const bump = (id: string, k: "reads" | "finishes" | "comments" | "bookmarks", n: number) => {
-    const v = acc.get(id) ?? { reads: 0, finishes: 0, comments: 0, bookmarks: 0 };
+  const acc = new Map<string, { reads: number; finishes: number; comments: number; bookmarks: number; likes: number }>();
+  const bump = (id: string, k: "reads" | "finishes" | "comments" | "bookmarks" | "likes", n: number) => {
+    const v = acc.get(id) ?? { reads: 0, finishes: 0, comments: 0, bookmarks: 0, likes: 0 };
     v[k] += n;
     acc.set(id, v);
   };
@@ -71,6 +72,7 @@ export async function weekBoard(limit = 20): Promise<RankRow[]> {
   finishes.forEach((r) => bump(r.storyId, "finishes", r._count._all));
   comments.forEach((r) => bump(r.storyId, "comments", r._count._all));
   bookmarks.forEach((r) => bump(r.storyId, "bookmarks", r._count._all));
+  likes.forEach((r) => bump(r.storyId, "likes", r._count._all));
   const scored = [...acc.entries()].map(([id, v]) => ({ id, h: weekHeat(v) })).sort((a, b) => b.h - a.h).slice(0, limit * 2);
   const m = await hydrate(scored.map((s) => s.id));
   return scored.filter((s) => m.has(s.id)).slice(0, limit).map((s) => ({ story: m.get(s.id)!, value: s.h }));

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { addComment, listComments, rateStory, recordRead, reportComment, toggleBookmark, type CommentView } from "@/app/actions/reading";
+import { addComment, listComments, rateStory, recordRead, reportComment, type CommentView } from "@/app/actions/reading";
 
 type Props = {
   storyId: string;
@@ -13,7 +13,6 @@ type Props = {
   signedIn: boolean;
   commentCounts: Record<number, number>;
   myRating: number | null;
-  bookmarked: boolean;
 };
 
 export function Reader(p: Props) {
@@ -22,7 +21,6 @@ export function Reader(p: Props) {
   const sent = useRef({ max: -1, fin: false });
   const [sheet, setSheet] = useState<number | null>(null);
   const [rating, setRating] = useState(p.myRating);
-  const [mark, setMark] = useState(p.bookmarked);
   const [msg, setMsg] = useState("");
   const [, start] = useTransition();
 
@@ -111,18 +109,6 @@ export function Reader(p: Props) {
             {msg && <span className="small">{msg}</span>}
           </div>
           <div className="btnrow">
-            <button
-              className="btn ghost"
-              onClick={() =>
-                start(async () => {
-                  const r = await toggleBookmark(p.storyId);
-                  if (r.error) setMsg(r.error);
-                  else setMark(!!r.on);
-                })
-              }
-            >
-              {mark ? "✓ 已在书架" : "加入书架"}
-            </button>
             <Link className="btn ghost" href="/ask">
               我也想问一个
             </Link>

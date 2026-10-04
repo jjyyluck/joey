@@ -27,7 +27,7 @@ export default async function Reports() {
           <div key={c.id} className="card">
             <span>{c.body}</span>
             <span className="small">
-              {c.user.name}（{c.user.email}）· <Link href={`/s/${c.story.id}`}>{c.story.title}</Link> 第 {c.paragraph + 1} 段 · {c._count.reports} 次举报
+              {c.user.name}（{c.user.email}）· <Link href={`/s/${c.story.id}`}>{c.story.title}</Link> {c.paragraph === null ? "全文评论" : `第 ${c.paragraph + 1} 段`} · {c._count.reports} 次举报
             </span>
             <div className="btnrow">
               <form action={resolveReport.bind(null, c.id, true)}>

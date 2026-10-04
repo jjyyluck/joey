@@ -47,6 +47,8 @@ model User {
   reviews       Submission[]   @relation("Reviewer")
   picks         EditorPick[]
   reports       Report[]
+  storyLikes    StoryLike[]
+  commentLikes  CommentLike[]
   following     Follow[]       @relation("Follower")
   followers     Follow[]       @relation("Followee")
 }
@@ -124,6 +126,7 @@ model Story {
   bookmarks  Bookmark[]
   reads      ReadEvent[]
   picks      EditorPick[]
+  likes      StoryLike[]
   submission Submission?
 
   @@index([questionId])
@@ -145,21 +148,50 @@ model ReadEvent {
 
   @@unique([storyId, visitorId, day])
   @@index([day])
+  @@index([visitorId])
 }
 
+/// paragraph = null means a comment on the whole story; parentId makes it a reply.
 model Comment {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   storyId   String
-  paragraph Int
+  paragraph Int?
+  parentId  String?
   userId    String
   body      String
-  hidden    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hidden    Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  story     Story         @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    Comment?      @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("Replies")
   reports   Report[]
+  likes     CommentLike[]
 
   @@index([storyId, paragraph])
+  @@index([parentId])
+}
+
+model CommentLike {
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])
+  @@index([commentId])
+}
+
+model StoryLike {
+  userId    String
+  storyId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storyId])
+  @@index([storyId, createdAt])
 }
 
 model Report {

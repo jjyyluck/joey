@@ -1,13 +1,14 @@
 /** Pure ranking formulas. Kept free of I/O so they can be unit-tested. */
 
-export const WEEK_WEIGHTS = { read: 1, finish: 3, comment: 2, bookmark: 2 } as const;
+export const WEEK_WEIGHTS = { read: 1, finish: 3, comment: 2, bookmark: 2, like: 2 } as const;
 
-export function weekHeat(x: { reads: number; finishes: number; comments: number; bookmarks: number }): number {
+export function weekHeat(x: { reads: number; finishes: number; comments: number; bookmarks: number; likes?: number }): number {
   return (
     x.reads * WEEK_WEIGHTS.read +
     x.finishes * WEEK_WEIGHTS.finish +
     x.comments * WEEK_WEIGHTS.comment +
-    x.bookmarks * WEEK_WEIGHTS.bookmark
+    x.bookmarks * WEEK_WEIGHTS.bookmark +
+    (x.likes ?? 0) * WEEK_WEIGHTS.like
   );
 }
 
