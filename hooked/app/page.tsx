@@ -4,6 +4,7 @@ import { feed } from "@/lib/queries";
 import { fmtN, readMinutes } from "@/lib/format";
 import { Footer } from "@/components/Footer";
 import { getUser } from "@/lib/auth";
+import { ReaderIntro } from "@/components/ReaderIntro";
 
 export default async function Discover({ searchParams }: { searchParams: Promise<{ c?: string; p?: string }> }) {
   const sp = await searchParams;
@@ -37,6 +38,7 @@ export default async function Discover({ searchParams }: { searchParams: Promise
           </Link>
         ))}
       </nav>
+      {!user && page === 0 && !cat && <ReaderIntro />}
       {items.length === 0 ? (
         <div className="empty">
           <p>{follow ? "你关注的作者还没有发布故事。在阅读页点作者头像旁的“关注”，TA 的新故事会出现在这里。" : "这个题材还没有故事。"}</p>
@@ -47,13 +49,17 @@ export default async function Discover({ searchParams }: { searchParams: Promise
       ) : (
         items.map((s) => (
           <Link key={s.id} href={`/s/${s.id}`} className="qcard">
-            <span className="hook">{s.question.category}</span>
+            <span className="hook">
+              {s.question.category}
+              {s.picks.length > 0 && <span className="tag">编辑推荐</span>}
+              {s.adaptation?.status === "RELEASED" && <span className="tag">已改编漫剧</span>}
+            </span>
             <span className="qtitle">{s.question.title}</span>
             <span className="excerpt">{s.opening}</span>
             <span className="meta">
               <span>{s.authorName}</span>
               <span>{fmtN(s._count.reads)} 次阅读</span>
-              <span>约 {readMinutes(s.charCount)} 分钟</span>
+              <span>{readMinutes(s.charCount)} 分钟读完</span>
               {s.question._count.waits > 0 && <span>{fmtN(s.question._count.waits)} 人坐等</span>}
             </span>
           </Link>

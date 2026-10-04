@@ -4,10 +4,11 @@ import "./globals.css";
 import { AskFab, Nav } from "@/components/Nav";
 import { getUser } from "@/lib/auth";
 import { unreadCount } from "@/lib/queries";
+import { META_DESCRIPTION } from "@/lib/positioning";
 
 export const metadata: Metadata = {
   title: { default: "Hooked · 有个故事", template: "%s · Hooked" },
-  description: "提一个问题，读别人的故事。问题是钩子，回答是故事。",
+  description: META_DESCRIPTION,
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };

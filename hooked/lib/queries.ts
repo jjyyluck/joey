@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { easternWeekStart } from "./time";
 
 export const FEED_PAGE = 20;
 
@@ -23,6 +24,8 @@ export async function feed(category: string | null, page: number, followerId: st
       charCount: true,
       question: { select: { id: true, title: true, category: true, _count: { select: { waits: true } } } },
       _count: { select: { reads: true } },
+      picks: { where: { week: easternWeekStart() }, select: { id: true }, take: 1 },
+      adaptation: { select: { status: true } },
     },
   });
   return {

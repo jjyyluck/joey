@@ -68,7 +68,8 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
         {bar()}
         <div className="meta">
           <span>{fmtN(reads)} 次阅读</span>
-          <span>约 {readMinutes(s.charCount)} 分钟</span>
+          <span>{readMinutes(s.charCount)} 分钟读完</span>
+          <span>✓ 编辑审核</span>
           {rating._count._all > 0 && (
             <span>
               {rating._avg.score!.toFixed(1)} 分 · {rating._count._all} 人评分

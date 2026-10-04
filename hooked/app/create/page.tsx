@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { openQuestions } from "@/lib/queries";
 import { fmtN } from "@/lib/format";
+import { WRITER_PITCH } from "@/lib/positioning";
+import { AUTHOR_SHARE } from "@/lib/adaptation-rules";
 
 export const metadata: Metadata = { title: "创作" };
 
@@ -10,8 +12,16 @@ export default async function CreatePage() {
   return (
     <div className="pad">
       <div className="card gold">
-        <b>已经写好了一个故事？</b>
-        <span className="small">粘贴正文或上传 .txt / .md / .docx，AI 帮你起标题、匹配问题、推荐付费点，编辑审核后上线。</span>
+        <b className="serif" style={{ fontSize: 17 }}>{WRITER_PITCH.tagline}</b>
+        <div className="ladder">
+          {WRITER_PITCH.steps.map(([k, v]) => (
+            <div key={k}>
+              <b>{k}</b>
+              <span>{k === "分成" ? `作者拿漫剧净收入的 ${Math.round(AUTHOR_SHARE * 100)}%，每月结算` : v}</span>
+            </div>
+          ))}
+        </div>
+        <span className="small">已经写好了？粘贴正文或上传 .txt / .md / .docx 就能投稿。</span>
         <div className="btnrow">
           <Link className="btn" href="/create/upload">
             上传作品
