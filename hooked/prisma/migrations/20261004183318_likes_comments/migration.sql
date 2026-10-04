@@ -1,0 +1,45 @@
+-- AlterTable
+ALTER TABLE "Comment" ADD COLUMN     "parentId" TEXT,
+ALTER COLUMN "paragraph" DROP NOT NULL;
+
+-- CreateTable
+CREATE TABLE "CommentLike" (
+    "userId" TEXT NOT NULL,
+    "commentId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CommentLike_pkey" PRIMARY KEY ("userId","commentId")
+);
+
+-- CreateTable
+CREATE TABLE "StoryLike" (
+    "userId" TEXT NOT NULL,
+    "storyId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "StoryLike_pkey" PRIMARY KEY ("userId","storyId")
+);
+
+-- CreateIndex
+CREATE INDEX "CommentLike_commentId_idx" ON "CommentLike"("commentId");
+
+-- CreateIndex
+CREATE INDEX "StoryLike_storyId_createdAt_idx" ON "StoryLike"("storyId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "Comment_parentId_idx" ON "Comment"("parentId");
+
+-- AddForeignKey
+ALTER TABLE "Comment" ADD CONSTRAINT "Comment_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Comment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CommentLike" ADD CONSTRAINT "CommentLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "CommentLike" ADD CONSTRAINT "CommentLike_commentId_fkey" FOREIGN KEY ("commentId") REFERENCES "Comment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StoryLike" ADD CONSTRAINT "StoryLike_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "StoryLike" ADD CONSTRAINT "StoryLike_storyId_fkey" FOREIGN KEY ("storyId") REFERENCES "Story"("id") ON DELETE CASCADE ON UPDATE CASCADE;

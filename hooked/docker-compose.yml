@@ -1,0 +1,37 @@
+# Local or single-server deployment: Postgres + migrations + app.
+#   cp .env.example .env   (fill in ANTHROPIC_API_KEY, ADMIN_EMAIL, ADMIN_PASSWORD, SITE_URL)
+#   docker compose up -d --build
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: hooked
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hooked}
+      POSTGRES_DB: hooked
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hooked"]
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: { context: ., target: tools }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://hooked:${POSTGRES_PASSWORD:-hooked}@db:5432/hooked
+    command: sh -c "npx prisma migrate deploy && npx tsx prisma/seed.ts"
+    depends_on:
+      db: { condition: service_healthy }
+
+  app:
+    build: { context: ., target: runner }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://hooked:${POSTGRES_PASSWORD:-hooked}@db:5432/hooked
+    ports: ["3000:3000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    restart: unless-stopped
+
+volumes:
+  pgdata:
