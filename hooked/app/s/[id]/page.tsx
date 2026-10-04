@@ -17,6 +17,7 @@ async function load(id: string) {
     include: {
       question: { select: { id: true, title: true, category: true } },
       author: { select: { id: true, name: true, bio: true } },
+      adaptation: { select: { status: true, releaseUrl: true } },
     },
   });
 }
@@ -94,6 +95,22 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
             {bar(48)}
             <span className="small">关注作者，TA 发布新故事时会通知你。</span>
           </div>
+        </div>
+      )}
+      {s.adaptation?.status === "RELEASED" && s.adaptation.releaseUrl && (
+        <div className="pad" style={{ paddingTop: 0 }}>
+          <a className="card gold" href={s.adaptation.releaseUrl} target="_blank" rel="noopener noreferrer">
+            <b>这个故事已改编成 AI 漫剧</b>
+            <span className="small">去看漫剧版 ›</span>
+          </a>
+        </div>
+      )}
+      {user && user.id === s.authorId && (!s.adaptation || s.adaptation.status === "DECLINED") && (
+        <div className="pad" style={{ paddingTop: 0 }}>
+          <Link className="card soft" href={`/adapt/${s.id}`}>
+            <b>想把这篇改编成 AI 漫剧？</b>
+            <span className="small">{s.adaptInvited ? "编辑邀请你申请，" : "数据达标后可以申请，"}作者按漫剧净收入分成。查看申请标准 ›</span>
+          </Link>
         </div>
       )}
       <Related items={recs} />

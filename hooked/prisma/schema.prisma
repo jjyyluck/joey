@@ -18,6 +18,14 @@ enum StoryStatus {
   HIDDEN
 }
 
+enum AdaptationStatus {
+  APPLIED
+  ACCEPTED
+  IN_PRODUCTION
+  RELEASED
+  DECLINED
+}
+
 enum SubmissionStatus {
   REVIEWING
   CHANGES_REQUESTED
@@ -48,6 +56,8 @@ model User {
   picks         EditorPick[]
   reports       Report[]
   storyLikes    StoryLike[]
+  adaptations   Adaptation[]
+  adaptReviews  Adaptation[]   @relation("AdaptReviewer")
   commentLikes  CommentLike[]
   following     Follow[]       @relation("Follower")
   followers     Follow[]       @relation("Followee")
@@ -117,6 +127,7 @@ model Story {
   status       StoryStatus @default(PUBLISHED)
   licensed     Boolean     @default(false) // from the licensed library
   aiUsage      String      @default("none")
+  adaptInvited Boolean     @default(false) // editor invited this story to apply for an AI comic adaptation
   publishedAt  DateTime    @default(now())
 
   question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
@@ -128,6 +139,7 @@ model Story {
   picks      EditorPick[]
   likes      StoryLike[]
   submission Submission?
+  adaptation Adaptation?
 
   @@index([questionId])
   @@index([publishedAt])
@@ -287,4 +299,42 @@ model RateLimit {
   key     String   @id
   count   Int
   resetAt DateTime
+}
+
+/// An author's application to turn a story into an AI comic drama, and its revenue share.
+model Adaptation {
+  id           String              @id @default(cuid())
+  storyId      String              @unique
+  authorId     String
+  status       AdaptationStatus    @default(APPLIED)
+  sharePct     Float // author's share of net revenue, locked when applying
+  notes        String              @default("")
+  metrics      Json // eligibility snapshot at application time
+  aiAssessment Json?
+  editorNote   String?
+  reviewerId   String?
+  releaseUrl   String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  story        Story               @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  author       User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  reviewer     User?               @relation("AdaptReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  revenues     AdaptationRevenue[]
+
+  @@index([status])
+  @@index([authorId])
+}
+
+/// Monthly net revenue of a released adaptation, entered by editors. Amounts in US cents.
+model AdaptationRevenue {
+  id           String     @id @default(cuid())
+  adaptationId String
+  month        DateTime   @db.Date // first day of the month
+  netCents     Int
+  authorCents  Int
+  note         String     @default("")
+  createdAt    DateTime   @default(now())
+  adaptation   Adaptation @relation(fields: [adaptationId], references: [id], onDelete: Cascade)
+
+  @@unique([adaptationId, month])
 }

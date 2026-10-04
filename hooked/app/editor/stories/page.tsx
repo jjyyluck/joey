@@ -3,6 +3,7 @@ import { requireEditor } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { EditorTabs } from "@/components/EditorTabs";
 import { setStoryStatus } from "@/app/actions/editor";
+import { inviteAdaptation } from "@/app/actions/adaptation";
 
 export default async function Stories({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requireEditor();
@@ -11,7 +12,7 @@ export default async function Stories({ searchParams }: { searchParams: Promise<
     where: q ? { OR: [{ title: { contains: q } }, { authorName: { contains: q } }, { id: q }] } : {},
     orderBy: { publishedAt: "desc" },
     take: 50,
-    select: { id: true, title: true, authorName: true, status: true, licensed: true, _count: { select: { reads: true } } },
+    select: { id: true, title: true, authorName: true, authorId: true, status: true, licensed: true, adaptInvited: true, adaptation: { select: { status: true } }, _count: { select: { reads: true } } },
   });
   return (
     <>
@@ -32,9 +33,20 @@ export default async function Stories({ searchParams }: { searchParams: Promise<
             <span className="small">
               {s.authorName} · {s._count.reads} 次阅读 · {s.licensed ? "授权库" : "用户投稿"} · ID {s.id}
             </span>
-            <form action={setStoryStatus.bind(null, s.id, s.status === "PUBLISHED")}>
-              <button className={`btn small ${s.status === "PUBLISHED" ? "danger" : ""}`}>{s.status === "PUBLISHED" ? "下架" : "恢复上线"}</button>
-            </form>
+            <div className="btnrow">
+              <form action={setStoryStatus.bind(null, s.id, s.status === "PUBLISHED")}>
+                <button className={`btn small ${s.status === "PUBLISHED" ? "danger" : ""}`}>{s.status === "PUBLISHED" ? "下架" : "恢复上线"}</button>
+              </form>
+              {s.authorId && !s.adaptation && (
+                s.adaptInvited ? (
+                  <span className="badge good">已邀请改编</span>
+                ) : (
+                  <form action={inviteAdaptation.bind(null, s.id)}>
+                    <button className="btn small ghost">邀请申请 AI 漫剧</button>
+                  </form>
+                )
+              )}
+            </div>
           </div>
         ))}
       </div>

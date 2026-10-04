@@ -5,6 +5,7 @@ const TABS: [string, string][] = [
   ["/me/shelf", "书架"],
   ["/me/following", "关注"],
   ["/me/submissions", "我的投稿"],
+  ["/me/adaptations", "漫剧"],
   ["/me/notifications", "通知"],
 ];
 

@@ -131,3 +131,11 @@ footer.foot{padding:20px 16px 100px;display:flex;gap:14px;flex-wrap:wrap;font-si
 .linkb{border:0;background:none;padding:0;color:var(--muted);font-size:12.5px}
 .linkb[aria-pressed="true"]{color:var(--bad)}
 .linkb:disabled{cursor:default}
+/* adaptation */
+.chkrow{display:grid;grid-template-columns:5.5em 1fr auto;gap:10px;align-items:center;font-size:14px;font-variant-numeric:tabular-nums}
+.bar{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold)}
+.bar i.ok{background:var(--good)}
+.score4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.score4 div{background:var(--surface-2);border-radius:8px;padding:6px 2px;font-size:12px;color:var(--muted)}
+.score4 b{display:block;font-size:18px;color:var(--ink)}

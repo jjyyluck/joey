@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const TABS: [string, string][] = [
   ["/editor", "审核队列"],
+  ["/editor/adaptations", "漫剧申请"],
   ["/editor/picks", "编辑推荐"],
   ["/editor/reports", "举报"],
   ["/editor/stories", "故事管理"],
