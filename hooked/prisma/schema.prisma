@@ -30,6 +30,7 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
+  bio          String   @default("")
   role         Role     @default(USER)
   createdAt    DateTime @default(now())
 
@@ -46,6 +47,19 @@ model User {
   reviews       Submission[]   @relation("Reviewer")
   picks         EditorPick[]
   reports       Report[]
+  following     Follow[]       @relation("Follower")
+  followers     Follow[]       @relation("Followee")
+}
+
+model Follow {
+  followerId String
+  followeeId String
+  createdAt  DateTime @default(now())
+  follower   User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee   User     @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followeeId])
+  @@index([followeeId])
 }
 
 model Session {
@@ -74,6 +88,7 @@ model Question {
 
   @@index([category])
   @@index([createdAt])
+  @@index([title(ops: raw("gin_trgm_ops"))], map: "Question_title_trgm", type: Gin)
 }
 
 model Wait {
@@ -113,6 +128,7 @@ model Story {
 
   @@index([questionId])
   @@index([publishedAt])
+  @@index([preview(ops: raw("gin_trgm_ops"))], map: "Story_preview_trgm", type: Gin)
 }
 
 model ReadEvent {

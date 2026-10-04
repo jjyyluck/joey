@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { logout } from "@/app/actions/auth";
 import { MeTabs } from "@/components/MeTabs";
 import { Footer } from "@/components/Footer";
+import { Avatar } from "@/components/Avatar";
 
 export const metadata: Metadata = { title: "我的" };
 
@@ -19,13 +20,21 @@ export default async function MePage() {
   return (
     <>
       <div className="pad">
-        <div className="card soft">
-          <b style={{ fontSize: 17 }}>{u.name}</b>
-          <span className="small">{u.email}</span>
+        <Link href={`/u/${u.id}`} className="card soft">
+          <span className="author">
+            <Avatar name={u.name} size={48} />
+            <span className="who">
+              <b>{u.name}</b>
+              <span>{u.email} · 查看我的主页 ›</span>
+            </span>
+          </span>
           <span className="small">
             提问 {q} · 坐等 {w} · 书架 {b} · 投稿 {s}
           </span>
-        </div>
+        </Link>
+        <Link className="btn ghost" href="/me/profile">
+          编辑资料
+        </Link>
         {isEditor(u) && (
           <Link className="btn" href="/editor">
             进入编辑后台

@@ -3,6 +3,7 @@ import Link from "next/link";
 const TABS: [string, string][] = [
   ["/me/questions", "我的提问"],
   ["/me/shelf", "书架"],
+  ["/me/following", "关注"],
   ["/me/submissions", "我的投稿"],
   ["/me/notifications", "通知"],
 ];

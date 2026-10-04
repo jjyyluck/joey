@@ -4,8 +4,12 @@ import { db } from "./db";
 export const FEED_PAGE = 20;
 
 /** Discover feed: one card per question, showing its best story's opening. */
-export async function feed(category: string | null, page: number) {
-  const where = { status: "PUBLISHED" as const, ...(category ? { question: { category } } : {}) };
+export async function feed(category: string | null, page: number, followerId: string | null = null) {
+  const where = {
+    status: "PUBLISHED" as const,
+    ...(category ? { question: { category } } : {}),
+    ...(followerId ? { author: { followers: { some: { followerId } } } } : {}),
+  };
   const stories = await db.story.findMany({
     where,
     orderBy: [{ publishedAt: "desc" }],

@@ -93,6 +93,7 @@ await ed.waitForURL(/\/editor/);
 await ed.click(".card >> text=婆婆请前儿媳来吃饭的那天");
 await ed.click("button:has-text('通过并上线')");
 await ed.waitForURL(/done=/);
+const storyId = new URL(ed.url()).searchParams.get("done");
 assert(await ed.locator("text=已上线").isVisible(), "approved and published");
 
 log("notifications and question page");
@@ -130,6 +131,47 @@ await p.locator(".pcb").first().click();
 await p.waitForSelector(".sheet .small >> nth=0");
 await p.waitForTimeout(800);
 assert((await p.locator(".sheet .cm", { hasText: note }).count()) === 0, "reported comment hidden by editor");
+
+log("follow an author");
+await r2.goto(BASE + "/s/" + storyId);
+assert((await r2.locator(".author .who b").first().textContent()) === "测试读者", "reader shows author bar");
+await r2.locator(".author a[aria-label$='的主页']").first().click();
+await r2.waitForURL(/\/u\//);
+assert((await r2.locator("text=婆婆请前儿媳来吃饭的那天").count()) === 1, "profile lists the author's stories");
+await r2.click(".followb.big");
+await r2.waitForSelector(".followb.big[aria-pressed=true]");
+await r2.reload();
+assert((await r2.locator(".ustats b").nth(1).textContent()) === "1", "follower count is 1 after reload");
+await r2.goto(BASE + "/?c=关注");
+assert((await r2.locator(".qcard").count()) === 1, "following feed shows the author's story");
+await r2.goto(BASE + "/me/following");
+assert((await r2.locator(".author .who b", { hasText: "测试读者" }).count()) === 1, "author in following list");
+
+log("followers notified of a new story");
+await p.goto(BASE + "/create/upload");
+await p.fill("#up-text", ["第二个故事的开头，我终于决定搬出婆婆家。"].concat(Array.from({ length: 30 }, (_, i) => `第${i + 2}段，搬家那天她站在门口一句话也没说，我把钥匙放在了鞋柜上，转身下楼。`)).join("\n"));
+await p.click("button:has-text('下一步：AI 分析')");
+await p.waitForSelector("text=第 2 步");
+await p.selectOption("#up-q", "");
+await p.fill("#up-newq", "你是怎么下定决心搬出婆家的？");
+await p.selectOption("#up-ai", "none"); await p.check("#up-rights"); await p.check("#up-label");
+await p.fill("#up-title", "我把钥匙放在了鞋柜上");
+await p.click("button:has-text('提交编辑审核')");
+await p.waitForURL(/me\/submissions/);
+await ed.goto(BASE + "/editor");
+await ed.click(".card >> text=我把钥匙放在了鞋柜上");
+await ed.click("button:has-text('通过并上线')");
+await ed.waitForURL(/done=/);
+await r2.goto(BASE + "/me/notifications");
+assert((await r2.locator(".card").first().textContent()).includes("你关注的 测试读者 发布了新故事"), "follower notified");
+
+log("profile edit");
+await p.goto(BASE + "/me/profile");
+await p.fill("#bio", "写婆媳关系的人");
+await p.click("button:has-text('保存')");
+await p.waitForURL(/\/u\//);
+assert(await p.locator("text=写婆媳关系的人").isVisible(), "bio saved");
+assert(await p.locator("text=编辑资料").isVisible(), "own profile shows edit instead of follow");
 
 log("non-editor blocked from editor");
 await p.goto(BASE + "/editor");

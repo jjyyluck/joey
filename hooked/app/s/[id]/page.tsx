@@ -4,12 +4,16 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getUser } from "@/lib/auth";
 import { Reader } from "@/components/Reader";
+import { AuthorBar } from "@/components/AuthorBar";
 import { fmtN, readMinutes } from "@/lib/format";
 
 async function load(id: string) {
   return db.story.findFirst({
     where: { id, status: "PUBLISHED" },
-    include: { question: { select: { id: true, title: true, category: true } } },
+    include: {
+      question: { select: { id: true, title: true, category: true } },
+      author: { select: { id: true, name: true, bio: true } },
+    },
   });
 }
 
@@ -28,7 +32,7 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
   // Paid paragraphs never leave the server for signed-out readers.
   const unlocked = !!user;
   const visible = unlocked ? s.paragraphs : s.paragraphs.slice(0, s.paywallAfter);
-  const [counts, reads, rating, mine, bookmarked, others] = await Promise.all([
+  const [counts, reads, rating, mine, bookmarked, others, follows] = await Promise.all([
     db.comment.groupBy({ by: ["paragraph"], where: { storyId: id, hidden: false }, _count: { _all: true } }),
     db.readEvent.count({ where: { storyId: id } }),
     db.rating.aggregate({ where: { storyId: id }, _avg: { score: true }, _count: { _all: true } }),
@@ -39,7 +43,13 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
       select: { id: true, title: true, authorName: true },
       take: 5,
     }),
+    user && s.authorId
+      ? db.follow.findUnique({ where: { followerId_followeeId: { followerId: user.id, followeeId: s.authorId } } })
+      : null,
   ]);
+  const bar = (size?: number) => (
+    <AuthorBar author={s.author} fallbackName={s.authorName} following={!!follows} signedIn={!!user} isMe={user?.id === s.authorId} size={size} />
+  );
   const commentCounts: Record<number, number> = {};
   counts.forEach((c) => (commentCounts[c.paragraph] = c._count._all));
   return (
@@ -51,8 +61,8 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
         <h1 className="serif" style={{ fontSize: 22, lineHeight: 1.45 }}>
           {s.question.title}
         </h1>
+        {bar()}
         <div className="meta">
-          <span>{s.authorName}</span>
           <span>{fmtN(reads)} 次阅读</span>
           <span>约 {readMinutes(s.charCount)} 分钟</span>
           {rating._count._all > 0 && (
@@ -76,6 +86,14 @@ export default async function StoryPage({ params }: { params: Promise<{ id: stri
         myRating={mine?.score ?? null}
         bookmarked={!!bookmarked}
       />
+      {s.author && user?.id !== s.authorId && (
+        <div className="pad" style={{ paddingTop: 0 }}>
+          <div className="card soft">
+            {bar(48)}
+            <span className="small">关注作者，TA 发布新故事时会通知你。</span>
+          </div>
+        </div>
+      )}
       {others.length > 0 && (
         <div className="pad">
           <h3>这个问题的其他回答</h3>

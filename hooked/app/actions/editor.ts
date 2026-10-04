@@ -40,6 +40,12 @@ export async function approveSubmission(id: string, form: FormData) {
       await tx.notification.createMany({
         data: notify.map((userId) => ({ userId, body: `你坐等的问题“${q!.title}”有新故事了：《${title}》`, href: `/s/${story.id}` })),
       });
+    const fans = await tx.follow.findMany({ where: { followeeId: sub.authorId }, select: { followerId: true } });
+    const fanIds = fans.map((f) => f.followerId).filter((u) => !notify.includes(u));
+    if (fanIds.length)
+      await tx.notification.createMany({
+        data: fanIds.map((userId) => ({ userId, body: `你关注的 ${sub.author.name} 发布了新故事：《${title}》`, href: `/s/${story.id}` })),
+      });
     return story.id;
   });
   redirect(`/editor?done=${storyId}`);
