@@ -338,6 +338,16 @@ Rafe: Talk to me. I don't want to think about tonight.
 }
 ```
 
+### 关系阶段（沿用竖屏短剧的浪漫里程碑，见方案 §10.2 第 8 条）
+
+| Stage | 里程碑 | Rafe 的对应节点 | 所在阶段 |
+|---|---|---|---|
+| Stage 1 | 误会 → 大转折 → 第一次肢体接触 → 初吻 | 假扮女伴的误会 → 挡酒 → 钢琴前并肩 → Blue Elena 初吻（好感 ≥ 30） | 第 1–2 章固定剧情 |
+| Stage 2 | 第一次拥抱 → 第一次承诺 → 第一次亲密时刻 | 码头事件后的拥抱（好感 ≥ 50）→ "I'm not dragging you into this. I'm asking you to stay."（好感 ≥ 60）→ fade-to-black（好感 ≥ 75） | AI 自由聊天 + 剧情事件 |
+| Stage 3 | 至暗时刻 / 分手 → 牺牲 → 表白 | 不做 HEA 结局；"Ray 的背叛"作为可触发的关系危机事件，之后回到 Stage 2 循环 | 剧情事件（回流） |
+
+`relationship_stage` 字段按上表取值（`stage1_misunderstanding` … `stage2_committed` …），系统提示词的 Pacing 段落据此决定 Rafe 当前允许推进到哪一步；`heat_pace: fast` 只影响速度，不跳过里程碑。
+
 ### AI 阶段事件触发（回流到固定章节）
 
 | 触发条件 | 推出的固定章节 / 事件 |
