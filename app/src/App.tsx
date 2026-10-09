@@ -597,6 +597,8 @@ function MemoryDrawer({ s, onClose }: { s: GameState; onClose: () => void }) {
 }
 
 function MatchScreen({ matched, onLike }: { matched: boolean; onLike: () => void }) {
+  // Card layout follows docs/style/match-card-style.md: full-bleed art, black fade,
+  // full name, zodiac glyph + one-line tagline, rewind / nope / like.
   return (
     <div className="phone match">
       <div className="brand">MeChat</div>
@@ -605,20 +607,22 @@ function MatchScreen({ matched, onLike }: { matched: boolean; onLike: () => void
           <span>R</span>
         </div>
         <div className="card-info">
-          <h2>
-            Rafe, <span>29</span>
-          </h2>
-          <p>Restaurateur · Scorpio ♏</p>
-          <p className="bio">“Looking for someone who doesn't scare easily.”</p>
+          <h2>Rafe Castellano</h2>
+          <p className="tagline">
+            <span className="zodiac">♏&#xFE0E;</span> I need a date in two hours. Don't ask questions. 😏
+          </p>
+          <div className="swipe">
+            <button className="rewind" onClick={() => alert("Prototype: nothing to rewind yet")} aria-label="Rewind">
+              ↺
+            </button>
+            <button className="nope" onClick={() => alert("Prototype: only Rafe is in the deck — give him a chance 😏")} aria-label="Pass">
+              ✕
+            </button>
+            <button className="like" onClick={onLike} disabled={matched} aria-label="Like">
+              ♥
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="swipe">
-        <button className="nope" onClick={() => alert("Prototype: only Rafe is in the deck — give him a chance 😏")}>
-          ✕
-        </button>
-        <button className="like" onClick={onLike} disabled={matched}>
-          ♥
-        </button>
       </div>
       {matched && <div className="matched">It's a match!</div>}
     </div>
